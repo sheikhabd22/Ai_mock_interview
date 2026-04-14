@@ -25,20 +25,20 @@ from backend.schemas.schemas import (
     EvaluateRequest, EvaluationResult, AnswerResponse,
     FinalReport,
 )
-from backend.api.auth import hash_password, verify_password, create_access_token
-
-def get_dummy_user(db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == "dummy@example.com").first()
-    if not user:
-        user = User(name="Dummy User", email="dummy@example.com", password="dummy")
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    return user
-
+from backend.api.auth_utils import hash_password, verify_password, create_access_token
+from backend.api.dependencies import get_dummy_user
 from backend.services.llm_engine import llm_engine
 from backend.services.speech_service import stt_service
 from backend.services.resume_parser import parse_resume, save_uploaded_resume
+from backend.api import interview
+from backend.api import auth_routes
+from backend.api import generate_questions
+from backend.api import upload_audio
+from backend.api import evaluation
+from backend.api import report
+from backend.api import upload_resume
+from fastapi.staticfiles import StaticFiles
+from backend.core.config import FRONTEND_BUILD_DIR
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -59,10 +59,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve static files — React build (production) or dev proxy
-FRONTEND_BUILD_DIR = Path(__file__).parent / "frontend" / "build"
-UPLOAD_DIR = Path(__file__).parent / "backend" / "uploads"
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
 
 if FRONTEND_BUILD_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_BUILD_DIR / "static")), name="static")
@@ -83,245 +80,32 @@ async def serve_frontend():
 # ──────────────────────────────────────────────
 # Auth endpoints
 # ──────────────────────────────────────────────
-@app.post("/api/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    """Register a new user."""
-    existing = db.query(User).filter(User.email == user_data.email).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+app.include_router(auth_routes.router, prefix="/api")
 
-    user = User(
-        name=user_data.name,
-        email=user_data.email,
-        password=hash_password(user_data.password),
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
-
-
-@app.post("/api/login", response_model=Token)
-def login(user_data: UserLogin, db: Session = Depends(get_db)):
-    """Login and receive a JWT token."""
-    user = db.query(User).filter(User.email == user_data.email).first()
-    if not user or not verify_password(user_data.password, user.password):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-
-    token = create_access_token(data={"sub": user.id})
-    return {"access_token": token, "token_type": "bearer"}
-
-
+app.include_router(upload_resume.router, prefix="/api")
 # ──────────────────────────────────────────────
 # Interview endpoints
 # ──────────────────────────────────────────────
-@app.post("/api/interviews", response_model=InterviewResponse, status_code=status.HTTP_201_CREATED)
-def create_interview(
-    data: InterviewCreate,
-    current_user: User = Depends(get_dummy_user),
-    db: Session = Depends(get_db),
-):
-    """Create a new interview session."""
-    interview = Interview(
-        user_id=current_user.id,
-        role=data.role,
-        experience_level=data.experience_level,
-        interview_type=data.interview_type,
-    )
-    db.add(interview)
-    db.commit()
-    db.refresh(interview)
-    return interview
-
-
-@app.get("/api/interviews", response_model=List[InterviewResponse])
-def list_interviews(
-    current_user: User = Depends(get_dummy_user),
-    db: Session = Depends(get_db),
-):
-    """List all interviews for the current user."""
-    return db.query(Interview).filter(Interview.user_id == current_user.id).all()
-
-
+app.include_router(interview.router, prefix="/api")
 # ──────────────────────────────────────────────
 # Question Generation
 # ──────────────────────────────────────────────
-@app.post("/api/generate-questions", response_model=QuestionResponse)
-def generate_questions(
-    data: QuestionGenerateRequest,
-    current_user: User = Depends(get_dummy_user),
-):
-    """Generate interview questions based on role, experience, and type."""
-    questions = llm_engine.generate_questions(
-        role=data.role,
-        experience_level=data.experience_level,
-        interview_type=data.interview_type,
-        num_questions=data.num_questions,
-        resume_text=data.resume_text,
-    )
-    return {"questions": questions}
-
+app.include_router(generate_questions.router, prefix="/api")
 
 # ──────────────────────────────────────────────
 # Audio Upload & Transcription & Resume
 # ──────────────────────────────────────────────
-@app.post("/api/upload-resume")
-async def upload_resume(file: UploadFile = File(...)):
-    """Upload a resume and extract its text."""
-    allowed_extensions = {".pdf", ".docx", ".doc", ".txt"}
-    ext = Path(file.filename).suffix.lower() if file.filename else ".pdf"
-    if ext not in allowed_extensions:
-        raise HTTPException(status_code=400, detail=f"Unsupported resume format: {ext}")
-    
-    content = await file.read()
-    file_path = save_uploaded_resume(content, file.filename)
-    
-    try:
-        parsed_data = parse_resume(file_path)
-        return {"parsed_data": parsed_data, "filename": file.filename}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to parse resume: {str(e)}")
-
-@app.post("/api/upload-audio")
-async def upload_audio(file: UploadFile = File(...)):
-    """Upload an audio file and return the saved file path."""
-    allowed_extensions = {".wav", ".mp3", ".webm", ".ogg", ".m4a"}
-    ext = Path(file.filename).suffix.lower() if file.filename else ".webm"
-    if ext not in allowed_extensions:
-        raise HTTPException(status_code=400, detail=f"Unsupported audio format: {ext}")
-
-    filename = f"{uuid.uuid4()}{ext}"
-    file_path = UPLOAD_DIR / filename
-
-    content = await file.read()
-    with open(file_path, "wb") as f:
-        f.write(content)
-
-    return {"filename": filename, "path": str(file_path)}
-
-
-@app.post("/api/transcribe")
-async def transcribe_audio(file: UploadFile = File(...)):
-    """Upload audio and transcribe it to text."""
-    ext = Path(file.filename).suffix.lower() if file.filename else ".webm"
-    filename = f"{uuid.uuid4()}{ext}"
-    file_path = UPLOAD_DIR / filename
-
-    content = await file.read()
-    with open(file_path, "wb") as f:
-        f.write(content)
-
-    try:
-        if ext == ".webm":
-            transcript = stt_service.transcribe_from_webm(str(file_path))
-        else:
-            transcript = stt_service.transcribe_audio(str(file_path))
-        return {"transcript": transcript, "filename": filename}
-    except Exception as e:
-        # Keep interview flow usable even when local audio codecs/services are unavailable.
-        return {
-            "transcript": "[Transcription unavailable. Please type or retry after configuring ffmpeg/speech service.]",
-            "filename": filename,
-            "warning": f"Transcription failed: {str(e)}",
-        }
-
+app.include_router(upload_audio.router, prefix="/api")
 
 # ──────────────────────────────────────────────
 # Answer Evaluation
 # ──────────────────────────────────────────────
-@app.post("/api/evaluate", response_model=EvaluationResult)
-def evaluate_answer(
-    data: EvaluateRequest,
-    current_user: User = Depends(get_dummy_user),
-    db: Session = Depends(get_db),
-):
-    """Evaluate a transcribed answer using the LLM."""
-    interview = db.query(Interview).filter(
-        Interview.id == data.interview_id,
-        Interview.user_id == current_user.id,
-    ).first()
-    if not interview:
-        raise HTTPException(status_code=404, detail="Interview not found")
-
-    # Get evaluation from LLM
-    evaluation = llm_engine.evaluate_answer(
-        question=data.question,
-        answer=data.transcript_text,
-        role=interview.role,
-        experience_level=interview.experience_level,
-    )
-
-    # Save answer to database
-    answer = Answer(
-        interview_id=interview.id,
-        question=data.question,
-        transcript_text=data.transcript_text,
-        evaluation_score=evaluation["overall_score"],
-        technical_accuracy=evaluation["technical_accuracy"],
-        clarity=evaluation["clarity"],
-        completeness=evaluation["completeness"],
-        communication=evaluation["communication"],
-        feedback=json.dumps({
-            "strengths": evaluation["strengths"],
-            "weaknesses": evaluation["weaknesses"],
-            "suggestions": evaluation["suggestions"],
-        }),
-    )
-    db.add(answer)
-    db.commit()
-
-    return evaluation
-
+app.include_router(evaluation.router, prefix="/api")
 
 # ──────────────────────────────────────────────
 # Final Report
 # ──────────────────────────────────────────────
-@app.get("/api/final-report/{interview_id}", response_model=FinalReport)
-def get_final_report(
-    interview_id: int,
-    current_user: User = Depends(get_dummy_user),
-    db: Session = Depends(get_db),
-):
-    """Generate a final performance report for an interview."""
-    interview = db.query(Interview).filter(
-        Interview.id == interview_id,
-        Interview.user_id == current_user.id,
-    ).first()
-    if not interview:
-        raise HTTPException(status_code=404, detail="Interview not found")
-
-    answers = db.query(Answer).filter(Answer.interview_id == interview_id).all()
-
-    if not answers:
-        raise HTTPException(status_code=404, detail="No answers found for this interview")
-
-    # Calculate overall score
-    scores = [a.evaluation_score for a in answers if a.evaluation_score is not None]
-    overall_score = (sum(scores) / len(scores) * 10) if scores else 0  # Convert to 0-100
-
-    # Update interview score
-    interview.score = overall_score
-    db.commit()
-
-    # Generate report summary using LLM
-    answers_data = [
-        {"question": a.question, "evaluation_score": a.evaluation_score}
-        for a in answers
-    ]
-    summary = llm_engine.generate_final_report_summary(answers_data, interview.role)
-
-    return FinalReport(
-        interview_id=interview.id,
-        role=interview.role,
-        experience_level=interview.experience_level,
-        interview_type=interview.interview_type,
-        overall_score=overall_score,
-        total_questions=len(answers),
-        answers=answers,
-        strengths=summary.get("strengths", []),
-        weaknesses=summary.get("weaknesses", []),
-        suggestions=summary.get("suggestions", []),
-    )
+app.include_router(report.router, prefix="/api")
 
 
 # ──────────────────────────────────────────────

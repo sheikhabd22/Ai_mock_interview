@@ -30,7 +30,7 @@ class LLMEngine:
         if not self.is_llm_configured or self.client is None:
             return self._get_fallback_questions(role, interview_type, num_questions)
 
-        prompt = f"""You are an expert interviewer. Generate exactly {num_questions} interview questions for:
+        prompt = f"""You are an expert interviewer. Generate exactly {num_questions} high-quality interview questions interview questions for:
 
         - Job Role: {role}
         - Experience Level: {experience_level}
@@ -39,6 +39,10 @@ class LLMEngine:
         Return each question on a new line.
         Do NOT number them.
         Do NOT add explanations.
+        - Make them realistic and industry-level
+        - Include follow-up depth based on the experience level
+        - Avoid generic questions
+        - If resume is provided, tailor questions to the candidate's experience and ask questions based on their resume
             """
 
         try:
