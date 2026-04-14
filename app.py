@@ -16,16 +16,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from backend.database import engine, get_db, Base
-from backend.models import User, Interview, Answer
-from backend.schemas import (
+from backend.db.database import engine, get_db, Base
+from backend.db.models import User, Interview, Answer
+from backend.schemas.schemas import (
     UserCreate, UserLogin, UserResponse, Token,
     InterviewCreate, InterviewResponse,
     QuestionGenerateRequest, QuestionResponse,
     EvaluateRequest, EvaluationResult, AnswerResponse,
     FinalReport,
 )
-from backend.auth import hash_password, verify_password, create_access_token
+from backend.api.auth import hash_password, verify_password, create_access_token
 
 def get_dummy_user(db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == "dummy@example.com").first()
@@ -36,9 +36,9 @@ def get_dummy_user(db: Session = Depends(get_db)):
         db.refresh(user)
     return user
 
-from backend.llm_engine import llm_engine
-from backend.speech_service import stt_service
-from backend.resume_parser import parse_resume, save_uploaded_resume
+from backend.services.llm_engine import llm_engine
+from backend.services.speech_service import stt_service
+from backend.services.resume_parser import parse_resume, save_uploaded_resume
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
