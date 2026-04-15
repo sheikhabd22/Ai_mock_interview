@@ -60,7 +60,7 @@ export default function Setup() {
   return (
     <div className="container">
       <header className="top-bar">
-        <h2>🎤 Interview Setup</h2>
+        <h2>Interview Setup</h2>
       </header>
 
       <div className="card">
@@ -120,27 +120,31 @@ export default function Setup() {
       </div>
 
       <div className="card">
-        <h3>📋 Past Interviews</h3>
+        <h3 className="section-title">Past Sessions</h3>
         {loadingPast ? (
-          <p className="muted">Loading...</p>
+          <p className="muted">Loading sessions...</p>
         ) : pastInterviews.length === 0 ? (
-          <p className="muted">No past interviews yet.</p>
+          <p className="muted">No past sessions found.</p>
         ) : (
-          pastInterviews.map((iv) => (
-            <div key={iv.id} className="interview-item">
-              <div>
-                <div className="info">{iv.role} - {iv.interview_type}</div>
-                <div className="meta">
-                  {iv.experience_level} &middot; {new Date(iv.date).toLocaleDateString()}
+          <div className="interview-list">
+            {pastInterviews.map((iv) => (
+              <div key={iv.id} className="interview-item">
+                <div className="interview-info">
+                  <div className="info">{iv.role}</div>
+                  <div className="meta">
+                    {iv.interview_type} &middot; {iv.experience_level} &middot; {new Date(iv.date).toLocaleDateString()}
+                  </div>
+                </div>
+                <div className="interview-status">
+                  {iv.score !== null ? (
+                    <span className="score-badge">{Math.round(iv.score)}</span>
+                  ) : (
+                    <span className="muted-text">In progress</span>
+                  )}
                 </div>
               </div>
-              {iv.score !== null ? (
-                <span className="score-badge">{Math.round(iv.score)}/100</span>
-              ) : (
-                <span className="muted">In progress</span>
-              )}
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
     </div>

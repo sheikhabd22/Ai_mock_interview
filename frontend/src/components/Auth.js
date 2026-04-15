@@ -51,8 +51,8 @@ export default function Auth() {
 
   return (
     <div className="container">
-      <h1>🎤🤖 AI Voice Mock Interview</h1>
-      <p className="subtitle">Practice interviews with AI-powered voice evaluation</p>
+      <h1>AI Voice Interview</h1>
+      <p className="subtitle">Practice with context-aware voice evaluation</p>
 
       <div className="card">
         <div className="tabs">

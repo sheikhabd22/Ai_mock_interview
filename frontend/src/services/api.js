@@ -104,3 +104,21 @@ export async function evaluateAnswer(interview_id, question, transcript_text) {
 export async function getFinalReport(interview_id) {
   return request(`/final-report/${interview_id}`);
 }
+
+// ── Text-to-Speech ───────────────────────────
+export async function speakText(text) {
+  const res = await fetch(`${API_BASE}/speak`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+
+  if (!res.ok) {
+    throw new Error('TTS request failed');
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  return audio.play();
+}

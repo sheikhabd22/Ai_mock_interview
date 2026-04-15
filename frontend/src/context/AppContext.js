@@ -6,7 +6,7 @@ export function AppProvider({ children }) {
   const [token, setTokenState] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('Processing...');
-  const [page, setPage] = useState('setup');
+   const [page, setPage] = useState('home');
 
   // Interview state
   const [interviewId, setInterviewId] = useState(null);

@@ -107,6 +107,12 @@ app.include_router(evaluation.router, prefix="/api")
 # ──────────────────────────────────────────────
 app.include_router(report.router, prefix="/api")
 
+# ──────────────────────────────────────────────
+# Text-to-Speech
+# ──────────────────────────────────────────────
+from backend.services.tts_service import router as tts_router
+app.include_router(tts_router, prefix="/api")
+
 
 # ──────────────────────────────────────────────
 # Health Check

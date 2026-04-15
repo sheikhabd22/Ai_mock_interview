@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { transcribeAudio, evaluateAnswer } from '../services/api';
+import { transcribeAudio, evaluateAnswer, speakText } from '../services/api';
 
 export default function Interview() {
   const {
@@ -28,7 +28,12 @@ export default function Interview() {
     setEvaluation(null);
     setTimerSeconds(0);
     setIsRecording(false);
-  }, [currentQuestionIndex]);
+    
+    // Speak the new question
+    if (currentQ && currentQ !== 'No question') {
+      speakText(currentQ).catch(err => console.error("TTS failed", err));
+    }
+  }, [currentQuestionIndex, currentQ]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -119,7 +124,7 @@ export default function Interview() {
   return (
     <div className="container">
       <header className="top-bar">
-        <h2>🎙️ Interview In Progress</h2>
+        <h2>Interview in Progress</h2>
         <span className="badge">Q {currentQuestionIndex + 1}/{total}</span>
       </header>
 
@@ -128,7 +133,17 @@ export default function Interview() {
         <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-muted)' }}>
           Question {currentQuestionIndex + 1}
         </div>
-        <p style={{ fontSize: '1.1rem' }}>{currentQ}</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ fontSize: '1.1rem', margin: 0 }}>{currentQ}</p>
+          <button 
+            className="btn btn-outline" 
+            onClick={() => speakText(currentQ)} 
+            style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+            title="Listen to question"
+          >
+             Speak
+          </button>
+        </div>
       </div>
 
       {/* Recording Card */}
@@ -171,8 +186,8 @@ export default function Interview() {
 
         {/* Evaluation */}
         {phase === 'evaluation' && evaluation && (
-          <div style={{ marginTop: '1rem' }}>
-            <h4>📊 Evaluation</h4>
+          <div className="evaluation-section" style={{ marginTop: '1.5rem' }}>
+            <h4 className="section-title">Evaluation</h4>
             <div className="scores-grid">
               {[
                 { label: 'Technical Accuracy', value: evaluation.technical_accuracy },
@@ -181,33 +196,29 @@ export default function Interview() {
                 { label: 'Communication', value: evaluation.communication },
               ].map((s) => (
                 <div className="score-item" key={s.label}>
-                  <span className="score-value">{s.value.toFixed(1)}</span>
-                  <span className="score-label">{s.label}</span>
+                  <div className="score-value">{s.value.toFixed(1)}</div>
+                  <div className="score-label">{s.label}</div>
                 </div>
               ))}
             </div>
 
-            {evaluation.strengths?.length > 0 && (
-              <div>
-                <p><strong>✅ Strengths:</strong></p>
-                <ul>{evaluation.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
-              </div>
-            )}
-            {evaluation.weaknesses?.length > 0 && (
-              <div>
-                <p><strong>⚠️ Weaknesses:</strong></p>
-                <ul>{evaluation.weaknesses.map((w, i) => <li key={i}>{w}</li>)}</ul>
-              </div>
-            )}
-            {evaluation.suggestions?.length > 0 && (
-              <div>
-                <p><strong>💡 Suggestions:</strong></p>
-                <ul>{evaluation.suggestions.map((s, i) => <li key={i}>{s}</li>)}</ul>
-              </div>
-            )}
+            <div className="feedback-grid">
+              {evaluation.strengths?.length > 0 && (
+                <div className="feedback-column">
+                  <h5>Strengths</h5>
+                  <ul>{evaluation.strengths.map((s, i) => <li key={i}>{s}</li>)}</ul>
+                </div>
+              )}
+              {evaluation.weaknesses?.length > 0 && (
+                <div className="feedback-column">
+                  <h5>Weaknesses</h5>
+                  <ul>{evaluation.weaknesses.map((w, i) => <li key={i}>{w}</li>)}</ul>
+                </div>
+              )}
+            </div>
 
-            <button className="btn btn-primary" onClick={handleNext} style={{ marginTop: '1rem' }}>
-              {currentQuestionIndex >= total - 1 ? 'View Report →' : 'Next Question →'}
+            <button className="btn btn-primary" onClick={handleNext} style={{ marginTop: '1.5rem' }}>
+              {currentQuestionIndex >= total - 1 ? 'End Interview & View Final Report' : 'Proceed to Next Question'}
             </button>
           </div>
         )}
