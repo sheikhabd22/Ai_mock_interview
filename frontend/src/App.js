@@ -7,6 +7,7 @@ import Report from './components/Report';
 import Loading from './components/Loading';
 import Home from './components/Home';
 import Navbar from './components/Navbar';
+import Dashboard from './components/Dashboard';
 
 import SoftAurora from './components/SoftAurora';
 
@@ -25,6 +26,7 @@ function AppContent() {
       <Navbar />
       {page === 'home' && <Home />}
       {page === 'auth' && <Auth />}
+      {page === 'dashboard' && <Dashboard />}
       {page === 'setup' && <Setup />}
       {page === 'interview' && <Interview />}
       {page === 'report' && <Report />}

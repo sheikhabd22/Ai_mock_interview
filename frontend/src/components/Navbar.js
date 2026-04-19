@@ -9,13 +9,13 @@ export default function Navbar() {
       <div className="nav-brand" onClick={() => setPage('home')}>
         <span>AI Mock Interview</span>
       </div>
-      
+
       <div className="nav-links">
         <span className="nav-link" onClick={() => setPage('home')}>Home</span>
-        
+
         {token ? (
           <>
-            <span className="nav-link" onClick={() => setPage('setup')}>Dashboard</span>
+            <span className="nav-link" onClick={() => setPage('dashboard')}>Dashboard</span>
             <button className="btn btn-outline btn-sm" onClick={logout}>Logout</button>
           </>
         ) : (

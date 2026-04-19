@@ -111,29 +111,26 @@ float auroraGlow(float t, vec2 shift) {
   vec2 uv = gl_FragCoord.xy / uResolution.y;
   uv += shift;
 
-  // Add a horizontal waving effect to break the straight line
-  float wave = sin(uv.x * 1.2 + t * 0.2) * 0.15;
+  // Add a subtle waving effect
+  float wave = sin(uv.x * 0.8 + t * 0.15) * 0.12;
   float yPos = uv.y - (uBandHeight + wave);
 
   float noiseVal = 0.0;
   float freq = uNoiseFreq;
   float amp = uNoiseAmp;
-  vec2 samplePos = uv * (uScale * 0.8);
+  vec2 samplePos = uv * (uScale * 0.5);
 
-  // High quality noise sum
   for (float i = 0.0; i < 4.0; i += 1.0) {
-    noiseVal += perlin3D(amp, freq, samplePos.x, samplePos.y, t * 0.5);
+    noiseVal += perlin3D(amp, freq, samplePos.x, samplePos.y, t * 0.3);
     amp *= uOctaveDecay;
     freq *= 2.0;
   }
 
-  // Gaussian-style smooth falloff
-  float glow = exp(-12.0 * pow(yPos + noiseVal * 0.25, 2.0));
+  // Use a softer power in the exponent to avoid sharp lines
+  float glow = exp(-6.0 * pow(abs(yPos + noiseVal * 0.2), 1.6));
+  float layer2 = exp(-12.0 * pow(abs(yPos + noiseVal * 0.05), 1.8)) * 0.4;
   
-  // Add a secondary subtle layer for more "aesthetic" depth
-  float layer2 = exp(-25.0 * pow(yPos + noiseVal * 0.1, 2.0)) * 0.5;
-  
-  return uBrightness * 0.2 * (glow + layer2) * uBandSpread;
+  return uBrightness * 0.15 * (glow + layer2) * uBandSpread;
 }
 
 void main() {
@@ -156,11 +153,11 @@ void main() {
 `;
 
 export default function SoftAurora({
-  speed = 0.6,
-  scale = 1.5,
-  brightness = 2.2,
-  color1 = '#f7f7f7',
-  color2 = '#e100ff',
+  speed = 0.3,
+  scale = 1.0,
+  brightness = 1.5,
+  color1 = '#ffffff',
+  color2 = '#3f3f46',
   noiseFrequency = 2.5,
   noiseAmplitude = 1.0,
   bandHeight = 0.5,

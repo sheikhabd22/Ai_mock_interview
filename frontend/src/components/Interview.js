@@ -2,6 +2,44 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { transcribeAudio, evaluateAnswer, speakText } from '../services/api';
 
+function CameraPreview() {
+  const videoRef = useRef(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let stream = null;
+    const startCamera = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { width: 300, height: 300 } });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (err) {
+        console.error("Camera access failed", err);
+        setError("Camera access denied");
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  return (
+    <div className="camera-container">
+      {error ? (
+        <div className="camera-placeholder">{error}</div>
+      ) : (
+        <video ref={videoRef} autoPlay playsInline muted />
+      )}
+    </div>
+  );
+}
+
 export default function Interview() {
   const {
     questions, currentQuestionIndex, setCurrentQuestionIndex,
@@ -228,6 +266,9 @@ export default function Interview() {
       <div className="progress-bar-container">
         <div className="progress-bar" style={{ width: `${progressPct}%` }}></div>
       </div>
+      
+      {/* Live Camera Feed */}
+      <CameraPreview />
     </div>
   );
 }
