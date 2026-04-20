@@ -2,7 +2,7 @@
  * API service for communicating with the backend.
  */
 
-const API_BASE = '/api';
+const API_BASE = process.env.REACT_APP_API_URL || '/api';
 
 function getToken() {
   return localStorage.getItem('token');
