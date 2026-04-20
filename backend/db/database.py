@@ -7,7 +7,12 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./interview.db")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-if "postgresql" in DATABASE_URL:
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgresql://", "postgresql+psycopg://", 1
+    )
+
+if DATABASE_URL.startswith("postgresql"):
     engine = create_engine(
         DATABASE_URL,
         connect_args={"sslmode": "require"},
