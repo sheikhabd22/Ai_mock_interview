@@ -1,5 +1,6 @@
 """Speech-to-Text service using SpeechRecognition library."""
 import os
+from groq import Groq
 import speech_recognition as sr
 from pathlib import Path
 
@@ -8,7 +9,7 @@ class SpeechToTextService:
     """Handles audio file transcription."""
 
     def __init__(self):
-        self.recognizer = sr.Recognizer()
+        self.groq = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
     def transcribe_audio(self, audio_path: str) -> str:
         """
@@ -28,19 +29,12 @@ class SpeechToTextService:
             audio.export(wav_path, format="wav")
             file_path = Path(wav_path)
 
-        # Transcribe using SpeechRecognition with Google Web Speech API
-        with sr.AudioFile(str(file_path)) as source:
-            self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
-            audio_data = self.recognizer.record(source)
-
-        try:
-            # Use Google's free Web Speech API
-            text = self.recognizer.recognize_google(audio_data)
-            return text
-        except sr.UnknownValueError:
-            return "[Could not understand audio]"
-        except sr.RequestError as e:
-            raise RuntimeError(f"Speech recognition service error: {e}")
+        with open(file_path, "rb") as audio_file:
+            response = self.groq.audio.transcriptions.create(
+                model="whisper-1",
+                file=audio_file,
+            )
+        return response.text
 
     def transcribe_from_webm(self, audio_path: str) -> str:
         """
