@@ -1,7 +1,6 @@
 """Speech-to-Text service using SpeechRecognition library."""
 import os
 from groq import Groq
-import speech_recognition as sr
 from pathlib import Path
 
 
