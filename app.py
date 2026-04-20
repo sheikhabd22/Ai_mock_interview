@@ -53,7 +53,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000","https://ai-mock-interview-1-fdnl.onrender.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
