@@ -5,7 +5,7 @@ from typing import List
 from backend.db.database import get_db
 from backend.db.models import Interview, User, Answer
 from backend.schemas.schemas import InterviewCreate, InterviewResponse
-from backend.api.dependencies import get_dummy_user  
+from backend.api.auth_utils import get_current_user
 from backend.services.llm_engine import llm_engine
 from backend.schemas.schemas import QuestionGenerateRequest, QuestionResponse, EvaluateRequest, EvaluationResult, FinalReport    
 
@@ -14,7 +14,7 @@ router = APIRouter(tags=["Report"])
 @router.get("/final-report/{interview_id}", response_model=FinalReport)
 def get_final_report(
     interview_id: int,
-    current_user: User = Depends(get_dummy_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Generate a final performance report for an interview."""

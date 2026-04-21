@@ -3,7 +3,7 @@ import React, { createContext, useState, useContext, useCallback } from 'react';
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
-  const [token, setTokenState] = useState(null);
+  const [token, setTokenState] = useState(() => localStorage.getItem('token'));
   const [loading, setLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('Processing...');
    const [page, setPage] = useState('home');
